@@ -1,30 +1,19 @@
-package mypackage
+package service
 
 import (
-    "os"
+	"io/ioutil"
+	"strings"
 )
 
+type Presenter interface {
+	Present([]string) error
+}
+
 type FilePresenter struct {
-    filePath string
+	FilePath string
 }
 
-func NewFilePresenter(filePath string) *FilePresenter {
-    return &FilePresenter{filePath: filePath}
-}
-
-func (fp *FilePresenter) Present(data []string) error {
-    file, err := os.Create(fp.filePath)
-    if err != nil {
-        return err
-    }
-    defer file.Close()
-
-    for _, line := range data {
-        _, err := file.WriteString(line + "\n")
-        if err != nil {
-            return err
-        }
-    }
-
-    return nil
+func (p *FilePresenter) Present(lines []string) error {
+	data := strings.Join(lines, "\n")
+	return ioutil.WriteFile(p.FilePath, []byte(data), 0644)
 }
