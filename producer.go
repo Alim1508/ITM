@@ -1,29 +1,23 @@
-package mypackage
+package service
 
 import (
-    "bufio"
-    "os"
+	"io/ioutil"
+	"strings"
 )
 
+type Producer interface {
+	Produce() ([]string, error)
+}
+
 type FileProducer struct {
-    filePath string
+	FilePath string
 }
 
-func NewFileProducer(filePath string) *FileProducer {
-    return &FileProducer{filePath: filePath}
-}
-
-func (fp *FileProducer) Produce() ([]string, error) {
-    file, err := os.Open(fp.filePath)
-    if err != nil {
-        return nil, err
-    }
-    defer file.Close()
-
-    var lines []string
-    scanner := bufio.NewScanner(file)
-    for scanner.Scan() {
-        lines = append(lines, scanner.Text())
-    }
-    return lines, scanner.Err()
+func (p *FileProducer) Produce() ([]string, error) {
+	data, err := ioutil.ReadFile(p.FilePath)
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(data), "\n")
+	return lines, nil
 }
