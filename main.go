@@ -1,26 +1,22 @@
 package main
 
 import (
-    "flag"
-    "log"
-    "mypackage"
+	"flag"
+	"log"
+	"github.com/Alim/ITM/service/service"
 )
 
 func main() {
-    inputFilePath := flag.String("input", "", "Path to the input file")
-    outputFilePath := flag.String("output", "output.txt", "Path to the output file")
-    flag.Parse()
+	inputFile := flag.String("input", "input.txt", "Path to the input file")
+	outputFile := flag.String("output", "output.txt", "Path to the output file")
+	flag.Parse()
 
-    if *inputFilePath == "" {
-        log.Fatal("Input file path is required")
-    }
+	producer := &service.FileProducer{FilePath: *inputFile}
+	presenter := &service.FilePresenter{FilePath: *outputFile}
 
-    producer := mypackage.NewFileProducer(*inputFilePath)
-    presenter := mypackage.NewFilePresenter(*outputFilePath)
+	svc := service.NewService(producer, presenter)
 
-    service := mypackage.NewService(producer, presenter)
-
-    if err := service.Run(); err != nil {
-        log.Fatalf("Service run failed: %v", err)
-    }
+	if err := svc.Run(); err != nil {
+		log.Fatalf("Service run failed: %v", err)
+	}
 }
