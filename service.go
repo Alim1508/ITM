@@ -1,44 +1,68 @@
-package mypackage
+package service
 
-type producer interface {
-    Produce() ([]string, error)
-}
-
-type presenter interface {
-    Present([]string) error
-}
+import (
+	"fmt"
+	"strings"
+	"sync"
+)
 
 type Service struct {
-    prod producer
-    pres presenter
+	prod Producer
+	pres Presenter
 }
 
-func NewService(prod producer, pres presenter) *Service {
-    return &Service{
-        prod: prod,
-        pres: pres,
-    }
+func NewService(p Producer, pr Presenter) *Service {
+	return &Service{
+		prod: p,
+		pres: pr,
+	}
 }
-
-func (s *Service) MaskLinks(data []string) []string {
-    maskedData := make([]string, len(data))
-    for i, message := range data {
-        maskedData[i] = string(maskLinks(message))
-    }
-    return maskedData
-}
-
+ 
 func (s *Service) Run() error {
-    data, err := s.prod.Produce()
-    if err != nil {
-        return err
-    }
+	lines, err := s.prod.Produce()
+	if err != nil {
+		return fmt.Errorf("error producing data: %w", err)
+	}
 
-    maskedData := s.MaskLinks(data)
 
-    if err := s.pres.Present(maskedData); err != nil {
-        return err
-    }
+	inputChan := make(chan string, len(lines))
+	outputChan := make(chan string, len(lines))
 
-    return nil
+
+	limitChan := make(chan struct{}, 10) // Вместо семафора используем канал с буфером 10
+
+	var wg sync.WaitGroup
+
+	for _, line := range lines {
+		inputChan <- line
+		wg.Add(1)
+		go func(text string) {
+			defer wg.Done()
+
+		    limitChan <- struct{}{}
+
+			result := maskLinks(text)
+			outputChan <- result
+
+			<-limitChan
+		}(line)
+	}
+
+	close(inputChan)
+
+	go func() {
+		wg.Wait()
+		close(outputChan)
+	}()
+
+	var results []string
+	for result := range outputChan {
+		results = append(results, result)
+	}
+
+	if err := s.pres.Present(results); err != nil {
+		return fmt.Errorf("error presenting data: %w", err)
+	}
+
+	return nil
 }
